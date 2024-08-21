@@ -299,4 +299,34 @@ namespace warp_utils
 		using replace_at = replace_helper<I, V, type_list<>, type_list<T...>>::type;
 
 	};
+
+    template<typename T>
+    struct type_wrapper
+    {
+        using type = T;
+    };
+
+    template <typename Callable>
+    auto for_each_type_impl(Callable, type_list<>) {};
+    template <typename T, typename... Ts, typename Callable>
+    auto for_each_type_impl(Callable callable, type_list<T, Ts...>)
+    {
+        static_assert(std::is_invocable_v<Callable, type_wrapper<T>>);
+        using invoke_result = std::invoke_result_t<Callable, type_wrapper<T>>;
+        using next_list = type_list<Ts...>;
+        if constexpr (std::is_void_v<invoke_result>)
+        {
+            callable(type_wrapper<T>{});
+            for_each_type_impl(callable, next_list{});
+        }
+        else
+            return callable(type_wrapper<T>{});//terminate if return non void
+    }
+    template <typename... T, typename Callable>
+    auto for_each_type(type_list<T...> list, Callable callable)
+    {
+        (callable(type_wrapper<T>{}), ...);
+        //return for_each_type_impl(callable, list);
+    }
+
 }
